@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pharmacy Stock Audit System</title>
+  
+  <!-- SheetJS for Excel handling -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- jsPDF & AutoTable for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <!-- Google Fonts & FontAwesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header & Nav */
+    header {
+      background: #0f172a;
+      color: #fff;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-title i {
+      color: #38bdf8;
+    }
+
+    .stepper {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .step-badge {
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: #334155;
+      color: #94a3b8;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .step-badge.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .step-badge.completed {
+      background: #10b981;
+      color: #fff;
+    }
+
+    /* Top Centered Header Banner */
+    .top-header-banner-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 1.5rem auto 0.75rem auto;
+      max-width: 1240px;
+      width: 100%;
+      padding: 0 1rem;
+      text-align: center;
+    }
+
+    .top-header-banner-card {
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .header-banner-heading {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: #1e3a8a;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .header-banner-subheading {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #dc2626;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      background: #fee2e2;
+      padding: 4px 18px;
+      border-radius: 9999px;
+      display: inline-block;
+      text-align: center;
+    }
+
+    /* Fixed Left Middle Audit Progress Tracker */
+    .audit-tracker-widget {
+      position: fixed;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-left: 5px solid var(--primary);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      z-index: 999;
+      min-width: 175px;
+      transition: all 0.2s ease;
+    }
+
+    .tracker-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tracker-stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.84rem;
+      margin-bottom: 5px;
+    }
+
+    .tracker-stat .label {
+      color: var(--text-muted);
+    }
+
+    .tracker-stat .val {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .val-completed { color: var(--success); }
+    .val-remaining { color: var(--warning); }
+    .val-total { color: var(--primary); }
+
+    .tracker-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .tracker-bar-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* Container */
+    main {
+      flex: 1;
+      max-width: 1240px;
+      width: 100%;
+      margin: 1rem auto 1.5rem auto;
+      padding: 0 1rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+      margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 1.25rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Actions & Controls */
+    .controls-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 240px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { background: #15803d; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { background: #f1f5f9; }
+
+    /* Responsive Table */
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      max-height: 620px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      padding: 12px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    input.table-input {
+      width: 100%;
+      min-width: 80px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.88rem;
+      background: #fff;
+    }
+
+    input.table-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+
+    .badge-excess {
+      background: #dcfce7;
+      color: #15803d;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .badge-short {
+      background: #fee2e2;
+      color: #b91c1c;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .badge-match {
+      background: #f1f5f9;
+      color: #64748b;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    /* Summary cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 1.5rem;
+    }
+
+    .summary-box {
+      padding: 15px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+    }
+
+    .summary-box.excess { border-left: 4px solid var(--success); }
+    .summary-box.short { border-left: 4px solid var(--danger); }
+    .summary-box.total { border-left: 4px solid var(--primary); }
+
+    .summary-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+    .summary-val { font-size: 1.4rem; font-weight: 700; margin-top: 4px; }
+
+    /* Footer verification */
+    .verified-banner {
+      margin-top: 1.5rem;
+      padding: 12px;
+      background: #eff6ff;
+      border-left: 4px solid var(--primary);
+      font-weight: 700;
+      color: #1e3a8a;
+      text-transform: uppercase;
+      text-align: center;
+      letter-spacing: 0.5px;
+      border-radius: 4px;
+    }
+
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .modal-box {
+      background: #ffffff;
+      border-radius: 12px;
+      width: 95%;
+      max-width: 580px;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-box h3 {
+      font-size: 1.2rem;
+      color: var(--danger);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-box p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .modal-option-card {
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .modal-option-card:hover {
+      border-color: var(--primary);
+      background: #f8fafc;
+    }
+
+    .modal-option-title {
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .modal-option-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1024px) {
+      .audit-tracker-widget {
+        position: static;
+        transform: none;
+        margin-bottom: 1rem;
+        min-width: 100%;
+      }
+    }
+
+    @media (max-width: 768px) {
+      header { flex-direction: column; align-items: flex-start; }
+      .controls-grid { flex-direction: column; align-items: stretch; }
+      .search-input { width: 100%; }
+      .btn { justify-content: center; }
+      .action-bar { flex-direction: column-reverse; }
+      .action-bar .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Left Side Middle Real-time Audit Tracker -->
+  <aside class="audit-tracker-widget">
+    <div class="tracker-title">
+      <i class="fa-solid fa-clipboard-check" style="color: var(--primary);"></i>
+      <span>Audit Progress</span>
+    </div>
+    <div class="tracker-stat">
+      <span class="label">Completed:</span>
+      <span class="val val-completed" id="tracker-completed">0</span>
+    </div>
+    <div class="tracker-stat">
+      <span class="label">Remaining:</span>
+      <span class="val val-remaining" id="tracker-remaining">0</span>
+    </div>
+    <div class="tracker-stat">
+      <span class="label">Total Stock:</span>
+      <span class="val val-total" id="tracker-total">0</span>
+    </div>
+    <div class="tracker-bar-bg">
+      <div class="tracker-bar-fill" id="tracker-bar"></div>
+    </div>
+  </aside>
+
+  <header>
+    <div class="brand-title">
+      <i class="fa-solid fa-file-waveform"></i>
+      <span>Pharmacy Stock Audit System</span>
+    </div>
+    <div class="stepper">
+      <div class="step-badge active" id="badge-step1">Step 1: Stock Audit & Variances</div>
+      <i class="fa-solid fa-chevron-right" style="color: #64748b; font-size: 0.75rem;"></i>
+      <div class="step-badge" id="badge-step2">Step 2: Final Verified Report</div>
+    </div>
+  </header>
+
+  <!-- Centered Heading at Top of Page -->
+  <div class="top-header-banner-wrapper">
+    <div class="top-header-banner-card">
+      <h1 class="header-banner-heading">NALINI GASTRO CENTER</h1>
+      <div class="header-banner-subheading">STOCK AUDIT REPORT</div>
+    </div>
+  </div>
+
+  <main>
+    <!-- STEP 1: Stock Audit, 1. EXCESS, 2. SHORT, Remarks, Delete, Clear Inputs -->
+    <section id="step1-container" class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Step 1: Stock Audit, Variance & Physical Count</h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+            Alphabetical default stock loaded. Enter physical count to calculate EXCESS/SHORT automatically and add remarks.
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <input type="file" id="master-file-input" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleMasterUpload(event)" />
+          <button class="btn btn-outline" onclick="document.getElementById('master-file-input').click()">
+            <i class="fa-solid fa-file-import"></i> Upload Master File( Remove 184 files and add new)
+          </button>
+          <button class="btn btn-outline" onclick="openAddItemModal()">
+            <i class="fa-solid fa-plus"></i> Add Medicine
+          </button>
+          <button class="btn btn-danger" onclick="openClearNotificationModal()">
+            <i class="fa-solid fa-rotate-left"></i> Clear Inputs
+          </button>
+        </div>
+      </div>
+
+      <div class="controls-grid">
+        <input type="text" class="search-input" id="search-step1" placeholder="🔍 Search medicine by name..." oninput="renderStep1()" />
+        <select id="filter-variance" class="search-input" style="max-width: 220px;" onchange="renderStep1()">
+          <option value="all">Show All Items</option>
+          <option value="audited">Audited Items Only</option>
+          <option value="pending">Pending Physical Count</option>
+          <option value="excess">1. Excess Only</option>
+          <option value="short">2. Short Only</option>
+        </select>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 45px;">#</th>
+              <th>Medicine / Item Name</th>
+              <th style="width: 110px;">Software Qty</th>
+              <th style="width: 120px;">Physical Qty</th>
+              <th style="width: 100px; color: var(--success);">1. EXCESS</th>
+              <th style="width: 100px; color: var(--danger);">2. SHORT</th>
+              <th style="min-width: 180px;">Remarks</th>
+              <th style="width: 60px; text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="step1-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-danger" onclick="openClearNotificationModal()">
+          <i class="fa-solid fa-rotate-left"></i> Clear Inputs
+        </button>
+        <button class="btn btn-primary" onclick="goToStep(2)">
+          Continue to Final Report <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 2: Final Stock Audit Report -->
+    <section id="step2-container" class="card" style="display: none;">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Step 2: Final Stock Audit Report</h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
+            Full report of excess, shortage, and audit remarks ready for export.
+          </p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-danger" onclick="openClearNotificationModal()">
+            <i class="fa-solid fa-rotate-left"></i> Clear Inputs
+          </button>
+          <button class="btn btn-success" onclick="exportToExcel()">
+            <i class="fa-solid fa-file-excel"></i> Download Excel
+          </button>
+          <button class="btn btn-danger" style="background: #dc2626;" onclick="exportToPDF()">
+            <i class="fa-solid fa-file-pdf"></i> Download PDF
+          </button>
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-box total">
+          <div class="summary-label">Total Stock Items</div>
+          <div class="summary-val" id="summary-total">0</div>
+        </div>
+        <div class="summary-box excess">
+          <div class="summary-label">Items with Excess</div>
+          <div class="summary-val" id="summary-excess" style="color: var(--success);">0</div>
+        </div>
+        <div class="summary-box short">
+          <div class="summary-label">Items with Shortage</div>
+          <div class="summary-val" id="summary-short" style="color: var(--danger);">0</div>
+        </div>
+        <div class="summary-box">
+          <div class="summary-label">Stock Matched</div>
+          <div class="summary-val" id="summary-matched" style="color: #64748b;">0</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 45px;">#</th>
+              <th>Item Name</th>
+              <th>Software Qty</th>
+              <th>Physical Qty</th>
+              <th>1. Excess Qty</th>
+              <th>2. Short Qty</th>
+              <th>Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="step2-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="verified-banner">
+        A VERIFIED STOCK REPORT FROM SIVA KARANGULA
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-outline" onclick="goToStep(1)">
+          <i class="fa-solid fa-arrow-left"></i> Back to Audit Screen
+        </button>
+        <button class="btn btn-danger" onclick="openClearNotificationModal()">
+          <i class="fa-solid fa-rotate-left"></i> Clear Inputs
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add Item Modal -->
+  <div class="modal-backdrop hidden" id="addItemModal">
+    <div class="modal-box" style="max-width: 450px;">
+      <h3 style="color: var(--primary);"><i class="fa-solid fa-plus"></i> Add Medicine to Stock</h3>
+      <div style="margin: 1rem 0 0.75rem 0;">
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px;">Medicine / Item Name</label>
+        <input type="text" id="new-item-name" class="table-input" placeholder="e.g. PARACETAMOL 650" />
+      </div>
+      <div style="margin-bottom: 1.25rem;">
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px;">Software / Uploaded Qty</label>
+        <input type="number" id="new-item-qty" class="table-input" placeholder="0" min="0" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeAddItemModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNewItem()">Add Medicine</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clear Notification Modal with 2 Exact Options -->
+  <div id="clear-modal" class="modal-backdrop hidden">
+    <div class="modal-box">
+      <h3><i class="fa-solid fa-triangle-exclamation"></i> Clear Stock Data Notification</h3>
+      <p>Please select which clear action you want to perform:</p>
+
+      <!-- Option 1 -->
+      <div class="modal-option-card" onclick="executeClearOption(1)">
+        <div class="modal-option-title">Option 1: Remove Uploaded File & Clear All Column Details</div>
+        <div class="modal-option-desc">
+          Remove uploaded file details along with item names, units, verified on, software quantity, physical quantity, excess & short, remarks only.
+        </div>
+      </div>
+
+      <!-- Option 2 -->
+      <div class="modal-option-card" onclick="executeClearOption(2)">
+        <div class="modal-option-title">Option 2: Clear Column Details Only (Keep Current Items)</div>
+        <div class="modal-option-desc">
+          Remove only item names, units, verified on, software quantity, physical quantity, excess & short, remarks only.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeClearNotificationModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 184 Unique Default Master Stock items
+    const defaultData = [
+      {"name": "20 PACK C-FIZZ ZINC", "qty": 43},
+      {"name": "3WAY CONNECTOR", "qty": 84},
+      {"name": "ACCUCHEK ACTIV", "qty": 450},
+      {"name": "ACTOPAN-CP", "qty": 7},
+      {"name": "ADGABA NT", "qty": 437},
+      {"name": "AF 150MG TAB", "qty": 254},
+      {"name": "AKURIT-4 TABS", "qty": 389},
+      {"name": "ALCOFIX TAB", "qty": 14},
+      {"name": "ALCOLIV 500", "qty": 222},
+      {"name": "AMCARD-5MG TABS", "qty": 213},
+      {"name": "ANTOXIPAN DS 6G", "qty": 143},
+      {"name": "ATROPA INJ", "qty": 36},
+      {"name": "AZEE-500MG TAB", "qty": 5},
+      {"name": "BUDEZ - CR", "qty": 250},
+      {"name": "BUSCOGAST AMP", "qty": 48},
+      {"name": "BUSCOGAST TABS", "qty": 14},
+      {"name": "BUTODOL INJ", "qty": 17},
+      {"name": "CALVOLI TAB", "qty": 14},
+      {"name": "CARR-LOCKE INJ NEEDLE 23G", "qty": 1},
+      {"name": "CIMUNE TAB", "qty": 387},
+      {"name": "CINTODAC CAP", "qty": 344},
+      {"name": "CIPLAR-LA 40MG TAB", "qty": 2974},
+      {"name": "CLARIBID 250 TABS", "qty": 2},
+      {"name": "CLEAR VIEW BAND", "qty": 51},
+      {"name": "COLONISE MV CAP", "qty": 338},
+      {"name": "COTIA SR TAB", "qty": 682},
+      {"name": "COTTON - 100 GM", "qty": 2},
+      {"name": "COTTON 400G", "qty": 2},
+      {"name": "CREACHEK", "qty": 149},
+      {"name": "CYMET ER25", "qty": 282},
+      {"name": "CYRA -D", "qty": 81},
+      {"name": "CYRAFLORA TAB", "qty": 298},
+      {"name": "DAILYCAL HD TAB", "qty": 252},
+      {"name": "DEPIN 10MG CAPS", "qty": 184},
+      {"name": "DEZOFLAV 1000MG", "qty": 231},
+      {"name": "DIGERAFT SYP", "qty": 231},
+      {"name": "DIRIFA 400", "qty": 4},
+      {"name": "DISPOVAN 10ML", "qty": 65},
+      {"name": "DISPOVAN 1MLSYRENGE", "qty": 85},
+      {"name": "DISPOVAN 3ML", "qty": 656},
+      {"name": "DISPOVAN 5ML SYRINGE", "qty": 345},
+      {"name": "DNS 500 ML", "qty": 37},
+      {"name": "DOLO 650-TAB", "qty": 62},
+      {"name": "DOMIN AMP", "qty": 1},
+      {"name": "DULCOFLEX TAB", "qty": 428},
+      {"name": "DUOLIN RESPULES", "qty": 9},
+      {"name": "DYTOR PLUS - 10MG", "qty": 630},
+      {"name": "E.T TUBE 6 MM", "qty": 1},
+      {"name": "E.T TUBE 7 MM", "qty": 1},
+      {"name": "E.T TUBE 8.5MM", "qty": 1},
+      {"name": "E.T.TUBE - 7.5", "qty": 1},
+      {"name": "EASY FIT UNDERPAD", "qty": 16},
+      {"name": "EASYTRODE E C G ELECTRODES", "qty": 191},
+      {"name": "ELDICET", "qty": 565},
+      {"name": "ENZISPORE CAP", "qty": 306},
+      {"name": "ESOMAC IV", "qty": 2},
+      {"name": "ESPRA 40MG", "qty": 8},
+      {"name": "ESSDOX", "qty": 335},
+      {"name": "ET TUBE CUFF 2.0", "qty": 1},
+      {"name": "ET TUBE CUFF 3", "qty": 1},
+      {"name": "ET TUBE CUFF 5", "qty": 1},
+      {"name": "ET TUBE CUFF 5.5", "qty": 1},
+      {"name": "ET TUBE CUFF 8", "qty": 1},
+      {"name": "ET TUBE PLAIN 2", "qty": 1},
+      {"name": "ET TUBE PLAIN 3.5", "qty": 1},
+      {"name": "ET TUBE PLAIN 4.5", "qty": 1},
+      {"name": "ET.TUBE CUFF 3.5", "qty": 1},
+      {"name": "ET.TUBE PLAIN 2.5", "qty": 1},
+      {"name": "ET.TUBE PLAIN 3", "qty": 1},
+      {"name": "ET.TUBE PLAIN 4", "qty": 1},
+      {"name": "ET.TUBE PLAIN 5", "qty": 1},
+      {"name": "ET.TUBE PLAIN 5.5", "qty": 1},
+      {"name": "ETOSHINE 60MG", "qty": 650},
+      {"name": "ETOSHINE MR", "qty": 258},
+      {"name": "ETOSYS TAB", "qty": 227},
+      {"name": "EVITOL CAP", "qty": 298},
+      {"name": "EXPAVON", "qty": 1},
+      {"name": "EZEEPAM PLUS 5MG", "qty": 335},
+      {"name": "FEROTIDE 100 MCG", "qty": 7},
+      {"name": "FEROTIS XT", "qty": 630},
+      {"name": "FLEXI FACE MASK ADULT", "qty": 47},
+      {"name": "GANATON TAB", "qty": 1229},
+      {"name": "GAUZE MOBS SMALL", "qty": 30},
+      {"name": "GLYCOMET SR 500MG", "qty": 906},
+      {"name": "H PYLORIKIT", "qty": 250},
+      {"name": "HEKORTIN 100MG", "qty": 100},
+      {"name": "HEPTRAL-400", "qty": 330},
+      {"name": "HYPROVAN 100MG", "qty": 15},
+      {"name": "IMODIUM CAP", "qty": 113},
+      {"name": "INNOVA BILIARY STENT 7CM", "qty": 7},
+      {"name": "INNOVA BILIARY STENT 8FR 8CM", "qty": 10},
+      {"name": "JUSTIN - AQ INJ", "qty": 5},
+      {"name": "KENADION-10MG 1ML", "qty": 16},
+      {"name": "KIT KATH 18G", "qty": 31},
+      {"name": "KIT KATH 20 G", "qty": 75},
+      {"name": "KIT KATH 22 G", "qty": 44},
+      {"name": "KLOTIN - 5ML", "qty": 18},
+      {"name": "LACTIFIBER SYP 180ML", "qty": 24},
+      {"name": "LACTIHEP SYRUP 200ML", "qty": 11},
+      {"name": "LATEX EXAMINATION GLOVES", "qty": 26},
+      {"name": "LESURIDE 25 MG", "qty": 88},
+      {"name": "LESURIDE INJ 2ML", "qty": 101},
+      {"name": "LEVAZEO 25MG", "qty": 2507},
+      {"name": "LEVOSIZ-M TAB", "qty": 426},
+      {"name": "LIVRITE TAB", "qty": 657},
+      {"name": "LOLATROL INJ", "qty": 32},
+      {"name": "LOX 2% GELLY 30MG", "qty": 159},
+      {"name": "LUBOWEL-24", "qty": 31},
+      {"name": "LUMIA 60K", "qty": 375},
+      {"name": "MACLAR-500MG TABS", "qty": 3},
+      {"name": "MCT - ROF 10ML", "qty": 5},
+      {"name": "ME-12 FORTE AMP", "qty": 27},
+      {"name": "MEBIZ SR CAPS", "qty": 8},
+      {"name": "MEGALEY-E", "qty": 646},
+      {"name": "METROGYL-400MG TABS", "qty": 800},
+      {"name": "MEVA SR TABS", "qty": 634},
+      {"name": "MOTINORM-DT TAB", "qty": 2955},
+      {"name": "NASO JEJUNAL FEEEDING TUBE", "qty": 2},
+      {"name": "NEOROF - 10ML", "qty": 20},
+      {"name": "NEOROF MCT", "qty": 22},
+      {"name": "NERVON FORTE", "qty": 700},
+      {"name": "NERVOTOP", "qty": 159},
+      {"name": "NEWTEL BETA 50", "qty": 45},
+      {"name": "NIPRO SYRINGE 20ML", "qty": 29},
+      {"name": "NIPRO SYRINGE/NEEDLE 5 ML", "qty": 1109},
+      {"name": "NIZONIDE - 500MG", "qty": 134},
+      {"name": "NORAD-2ML", "qty": 8},
+      {"name": "NORMAXIN TABS", "qty": 80},
+      {"name": "NS 500ML", "qty": 131},
+      {"name": "NS-100ML", "qty": 227},
+      {"name": "OFLOMAC 200MG TAB", "qty": 168},
+      {"name": "PANCREATIC STENT 10CM", "qty": 1},
+      {"name": "PANCREATIC STENT 7CM", "qty": 2},
+      {"name": "PANTOCID - 40MG", "qty": 1022},
+      {"name": "PANTOCID 80MG", "qty": 138},
+      {"name": "PANTOCID DSR", "qty": 5},
+      {"name": "PANTODAC 40MG", "qty": 46},
+      {"name": "PANTODAC DSR", "qty": 3404},
+      {"name": "PEG -24-PULL-S", "qty": 1},
+      {"name": "PENTASA 1GM", "qty": 395},
+      {"name": "PERINORM - 2ML", "qty": 22},
+      {"name": "PRASOPHEG INJ", "qty": 598},
+      {"name": "PRE PRO TAB", "qty": 133},
+      {"name": "PRUVICT - 2MG", "qty": 504},
+      {"name": "PRUWEL 1MG", "qty": 333},
+      {"name": "PYLOBIS TAB", "qty": 2},
+      {"name": "PYLOFLUSH CAP", "qty": 357},
+      {"name": "R L 500ML", "qty": 131},
+      {"name": "RANIDOM-O-SUSP 200ML", "qty": 8},
+      {"name": "RCINEX 450", "qty": 1321},
+      {"name": "REHEPTIN", "qty": 20},
+      {"name": "ROSUVAS F 10", "qty": 435},
+      {"name": "ROWASA 2G", "qty": 194},
+      {"name": "RYLES TUBE 14", "qty": 2},
+      {"name": "SAMOLAL SACHET", "qty": 15},
+      {"name": "SOMPRAZ IT", "qty": 313},
+      {"name": "SRFIL ENEMA", "qty": 95},
+      {"name": "STERIFIX", "qty": 132},
+      {"name": "SURE IT-O SUSPENSION", "qty": 94},
+      {"name": "SURGICAL GLOVE 7.5", "qty": 120},
+      {"name": "SURGICAL SPIRIT 5L", "qty": 1},
+      {"name": "SWFI-10ML", "qty": 34},
+      {"name": "SYSFOL TAB", "qty": 1402},
+      {"name": "SYSNIT-SR", "qty": 77},
+      {"name": "TAB BISTAS", "qty": 1261},
+      {"name": "TENTIDE AF 25MG", "qty": 90},
+      {"name": "THEMISEAL", "qty": 67},
+      {"name": "TOCOFIL CAPSULES", "qty": 38},
+      {"name": "TRAMACET TABLET", "qty": 416},
+      {"name": "TRANSPORE-2", "qty": 24},
+      {"name": "TYCO ET CUFF 4", "qty": 1},
+      {"name": "U-TRYP - 10000IU", "qty": 16},
+      {"name": "UROGRAFIN INJ", "qty": 2},
+      {"name": "URSOBIAC", "qty": 221},
+      {"name": "VASOCON 1ML", "qty": 278},
+      {"name": "VELGUT CAP", "qty": 805},
+      {"name": "VIKOMSHI RUB SHEET-10MTS", "qty": 10},
+      {"name": "VOMIKIND INJ", "qty": 23},
+      {"name": "WYSOLONE 10MG", "qty": 2690},
+      {"name": "WYSOLONE 20 DT TAB", "qty": 321},
+      {"name": "XYLOCAN VISCOUS 200ML", "qty": 32},
+      {"name": "ZADY500MG TAB", "qty": 27},
+      {"name": "ZENFLOX OZ TAB", "qty": 347},
+      {"name": "ZETRI 1GM", "qty": 18}
+    ];
+
+    // Set of original 184 normalized names
+    const initial184Names = new Set(defaultData.map(d => d.name.toUpperCase().trim()));
+
+    // Master stock list state
+    let stockList = [];
+
+    // Helper to initialize clean stock
+    function getFreshInitialStock() {
+      return defaultData.map((item, idx) => ({
+        id: idx + 1,
+        name: item.name,
+        softwareQty: item.qty,
+        physicalQty: '',
+        remarks: ''
+      })).sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    let currentStep = 1;
+
+    // Open/close clear notification popup
+    function openClearNotificationModal() {
+      document.getElementById('clear-modal').classList.remove('hidden');
+    }
+
+    function closeClearNotificationModal() {
+      document.getElementById('clear-modal').classList.add('hidden');
+    }
+
+    // Execute Clear Choice with complete column removal
+    function executeClearOption(option) {
+      if (option === 1) {
+        // Option 1: Remove uploaded file details along with item names, units, verified on, software quantity, physical quantity, excess & short, remarks only
+        stockList = defaultData.map((item, idx) => ({
+          id: idx + 1,
+          name: '',
+          softwareQty: '',
+          physicalQty: '',
+          remarks: ''
+        }));
+      } else if (option === 2) {
+        // Option 2: Remove only item names, units, verified on, software quantity, physical quantity, excess & short, remarks only
+        stockList.forEach(item => {
+          item.name = '';
+          item.softwareQty = '';
+          item.physicalQty = '';
+          item.remarks = '';
+        });
+      }
+
+      closeClearNotificationModal();
+      document.getElementById('search-step1').value = '';
+      document.getElementById('filter-variance').value = 'all';
+      renderStep1();
+      if (currentStep === 2) renderStep2();
+    }
+
+    // Modal Add Item Management
+    function openAddItemModal() {
+      document.getElementById('new-item-name').value = '';
+      document.getElementById('new-item-qty').value = '';
+      document.getElementById('addItemModal').classList.remove('hidden');
+    }
+
+    function closeAddItemModal() {
+      document.getElementById('addItemModal').classList.add('hidden');
+    }
+
+    function saveNewItem() {
+      const name = document.getElementById('new-item-name').value.trim();
+      const qty = parseFloat(document.getElementById('new-item-qty').value) || 0;
+
+      if (!name) {
+        alert("Please enter a valid medicine name.");
+        return;
+      }
+
+      const newId = stockList.length > 0 ? Math.max(...stockList.map(i => i.id)) + 1 : 1;
+      stockList.push({
+        id: newId,
+        name: name.toUpperCase(),
+        softwareQty: qty,
+        physicalQty: '',
+        remarks: ''
+      });
+
+      stockList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      closeAddItemModal();
+      renderStep1();
+    }
+
+    // Master File Upload: Excludes 184 initial items AND excludes any items that already have physical stock quantity entered
+    function handleMasterUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+          let nameIdx = 0;
+          let qtyIdx = 1;
+          let startRow = 0;
+
+          // Detect header columns
+          for (let i = 0; i < Math.min(10, rows.length); i++) {
+            const row = rows[i] || [];
+            row.forEach((cell, cIdx) => {
+              const str = String(cell).toLowerCase().trim();
+              if (str.includes('item') || str.includes('name') || str.includes('description') || str.includes('medicine')) {
+                nameIdx = cIdx;
+                startRow = i + 1;
+              }
+              if (str.includes('qty') || str.includes('quantity') || str.includes('closing')) {
+                qtyIdx = cIdx;
+              }
+            });
+          }
+
+          // Build a set of items that have already been physically audited (have physical quantity)
+          const auditedNames = new Set(
+            stockList
+              .filter(item => item.name && item.physicalQty !== '' && item.physicalQty !== null && !isNaN(item.physicalQty))
+              .map(item => item.name.toUpperCase().trim())
+          );
+
+          const activeNames = new Set(stockList.filter(item => item.name).map(item => item.name.toUpperCase().trim()));
+          let addedCount = 0;
+          let removedCount = 0;
+          let nextId = stockList.length > 0 ? Math.max(...stockList.map(i => i.id)) + 1 : 1;
+
+          for (let r = startRow; r < rows.length; r++) {
+            const row = rows[r];
+            if (!row || !row[nameIdx]) continue;
+
+            const rawName = String(row[nameIdx]).trim();
+            if (!rawName || rawName.toLowerCase() === 'total' || rawName.toLowerCase() === 'item name') continue;
+
+            const normalized = rawName.toUpperCase();
+
+            // Strict Filter: Exclude if in the 184 default list OR already has physical stock quantity entered OR already present in active list
+            if (initial184Names.has(normalized) || auditedNames.has(normalized) || activeNames.has(normalized)) {
+              removedCount++;
+            } else {
+              const parsedQty = parseFloat(row[qtyIdx]) || 0;
+              stockList.push({
+                id: nextId++,
+                name: rawName,
+                softwareQty: parsedQty,
+                physicalQty: '',
+                remarks: ''
+              });
+              activeNames.add(normalized);
+              addedCount++;
+            }
+          }
+
+          stockList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+          renderStep1();
+          alert(`Master Stock Processed Successfully:\n• ${removedCount} duplicate / 184 medicines / already audited medicines excluded.\n• ${addedCount} new medicines added.`);
+        } catch (err) {
+          console.error(err);
+          alert("Error parsing file. Please ensure it's a valid Excel or CSV file.");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      event.target.value = '';
+    }
+
+    // Update real-time progress tracker
+    function updateAuditTracker() {
+      const total = stockList.length;
+      const completed = stockList.filter(i => i.physicalQty !== '' && i.physicalQty !== null && !isNaN(i.physicalQty)).length;
+      const remaining = total - completed;
+      const pct = total > 0 ? ((completed / total) * 100).toFixed(0) : 0;
+
+      document.getElementById('tracker-completed').innerText = completed;
+      document.getElementById('tracker-remaining').innerText = remaining;
+      document.getElementById('tracker-total').innerText = total;
+      document.getElementById('tracker-bar').style.width = pct + '%';
+    }
+
+    // Navigation
+    function goToStep(step) {
+      currentStep = step;
+      document.getElementById('step1-container').style.display = step === 1 ? 'block' : 'none';
+      document.getElementById('step2-container').style.display = step === 2 ? 'block' : 'none';
+
+      document.getElementById('badge-step1').className = 'step-badge ' + (step === 1 ? 'active' : 'completed');
+      document.getElementById('badge-step2').className = 'step-badge ' + (step === 2 ? 'active' : '');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (step === 1) renderStep1();
+      if (step === 2) renderStep2();
+    }
+
+    // Step 1: 1. EXCESS column first, 2. SHORT column second
+    function renderStep1() {
+      const q = document.getElementById('search-step1').value.toLowerCase();
+      const filter = document.getElementById('filter-variance').value;
+      const tbody = document.getElementById('step1-tbody');
+      tbody.innerHTML = '';
+
+      const filtered = stockList.filter(item => {
+        const matchesQuery = (item.name || '').toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+
+        const hasCount = item.physicalQty !== '' && item.physicalQty !== null && !isNaN(item.physicalQty);
+        const pQty = hasCount ? parseFloat(item.physicalQty) : 0;
+        const sQty = item.softwareQty !== '' && item.softwareQty !== null && !isNaN(item.softwareQty) ? parseFloat(item.softwareQty) : 0;
+        const diff = pQty - sQty;
+
+        if (filter === 'audited') return hasCount;
+        if (filter === 'pending') return !hasCount;
+        if (filter === 'excess') return hasCount && diff > 0;
+        if (filter === 'short') return hasCount && diff < 0;
+        return true;
+      });
+
+      filtered.forEach((item, idx) => {
+        const hasCount = item.physicalQty !== '' && item.physicalQty !== null && !isNaN(item.physicalQty);
+        const pQty = hasCount ? parseFloat(item.physicalQty) : 0;
+        const sQty = item.softwareQty !== '' && item.softwareQty !== null && !isNaN(item.softwareQty) ? parseFloat(item.softwareQty) : 0;
+        const diff = pQty - sQty;
+
+        let excessCol = '-';
+        let shortCol = '-';
+
+        if (hasCount) {
+          if (diff > 0) {
+            excessCol = `<span class="badge-excess">+${diff}</span>`;
+            shortCol = `-`;
+          } else if (diff < 0) {
+            excessCol = `-`;
+            shortCol = `<span class="badge-short">-${Math.abs(diff)}</span>`;
+          } else {
+            excessCol = `<span class="badge-match">0</span>`;
+            shortCol = `<span class="badge-match">0</span>`;
+          }
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="color: var(--text-muted); font-size: 0.8rem;">${idx + 1}</td>
+          <td>
+            <input type="text" class="table-input" value="${escapeHtml(item.name || '')}" onchange="updateItemName(${item.id}, this.value)" style="font-weight: 600;" />
+          </td>
+          <td>
+            <input type="number" class="table-input" min="0" value="${item.softwareQty !== '' && item.softwareQty !== null && item.softwareQty !== undefined ? item.softwareQty : ''}" onchange="updateSoftwareQty(${item.id}, this.value)" />
+          </td>
+          <td>
+            <input type="number" class="table-input" min="0" placeholder="Count..." value="${item.physicalQty !== '' ? item.physicalQty : ''}" onchange="updatePhysicalQty(${item.id}, this.value)" style="background: ${hasCount ? '#f0fdf4' : '#fff'}; border-color: ${hasCount ? '#86efac' : 'var(--border)'}; font-weight: 600;" />
+          </td>
+          <td style="text-align: center;">${excessCol}</td>
+          <td style="text-align: center;">${shortCol}</td>
+          <td>
+            <input type="text" class="table-input" placeholder="Type remark..." value="${escapeHtml(item.remarks || '')}" onchange="updateRemarks(${item.id}, this.value)" />
+          </td>
+          <td style="text-align: center;">
+            <button class="btn btn-danger" style="padding: 6px 9px; font-size: 0.8rem;" onclick="deleteItem(${item.id})" title="Delete item">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      updateAuditTracker();
+    }
+
+    // Step 2: Final Report Render with 1. Excess Qty, 2. Short Qty
+    function renderStep2() {
+      const tbody = document.getElementById('step2-tbody');
+      tbody.innerHTML = '';
+
+      let totalExcess = 0;
+      let totalShort = 0;
+      let totalMatch = 0;
+
+      stockList.forEach((item, idx) => {
+        const hasCount = item.physicalQty !== '' && item.physicalQty !== null && !isNaN(item.physicalQty);
+        const pQty = hasCount ? parseFloat(item.physicalQty) : 0;
+        const sQty = item.softwareQty !== '' && item.softwareQty !== null && !isNaN(item.softwareQty) ? parseFloat(item.softwareQty) : 0;
+        const diff = pQty - sQty;
+
+        let statusBadge = '';
+        let excessVal = '-';
+        let shortVal = '-';
+
+        if (!hasCount) {
+          statusBadge = `<span class="badge-match">NOT AUDITED</span>`;
+        } else if (diff > 0) {
+          totalExcess++;
+          excessVal = `+${diff}`;
+          statusBadge = `<span class="badge-excess">EXCESS (+${diff})</span>`;
+        } else if (diff < 0) {
+          totalShort++;
+          shortVal = `-${Math.abs(diff)}`;
+          statusBadge = `<span class="badge-short">SHORT (-${Math.abs(diff)})</span>`;
+        } else {
+          totalMatch++;
+          statusBadge = `<span class="badge-match">MATCHED</span>`;
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="color: var(--text-muted); font-size: 0.8rem;">${idx + 1}</td>
+          <td style="font-weight: 600;">${escapeHtml(item.name || '—')}</td>
+          <td>${item.softwareQty !== '' ? item.softwareQty : '—'}</td>
+          <td style="font-weight: 600;">${hasCount ? item.physicalQty : '—'}</td>
+          <td style="color: var(--success); font-weight: 600;">${excessVal}</td>
+          <td style="color: var(--danger); font-weight: 600;">${shortVal}</td>
+          <td>${statusBadge}</td>
+          <td style="color: var(--text-muted); font-size: 0.85rem;">${escapeHtml(item.remarks || '—')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('summary-total').innerText = stockList.length;
+      document.getElementById('summary-excess').innerText = totalExcess;
+      document.getElementById('summary-short').innerText = totalShort;
+      document.getElementById('summary-matched').innerText = totalMatch;
+
+      updateAuditTracker();
+    }
+
+    // Update helpers
+    function updateItemName(id, val) {
+      const item = stockList.find(i => i.id === id);
+      if (item) {
+        item.name = val.trim();
+        stockList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      }
+    }
+
+    function updateSoftwareQty(id, val) {
+      const item = stockList.find(i => i.id === id);
+      if (item) {
+        item.softwareQty = val.trim() === '' ? '' : Math.max(0, parseFloat(val) || 0);
+        renderStep1();
+      }
+    }
+
+    function updatePhysicalQty(id, val) {
+      const item = stockList.find(i => i.id === id);
+      if (item) {
+        item.physicalQty = val.trim() === '' ? '' : Math.max(0, parseFloat(val) || 0);
+        renderStep1();
+      }
+    }
+
+    function updateRemarks(id, val) {
+      const item = stockList.find(i => i.id === id);
+      if (item) item.remarks = val;
+    }
+
+    function deleteItem(id) {
+      if (confirm("Are you sure you want to delete this medicine?")) {
+        stockList = stockList.filter(i => i.id !== id);
+        renderStep1();
+      }
+    }
+
+    // Export to Excel: 1. EXCESS, 2. SHORT
+    function exportToExcel() {
+      const exportData = stockList.map((item, idx) => {
+        const hasCount = item.physicalQty !== '' && item.physicalQty !== null && !isNaN(item.physicalQty);
+        const pQty = hasCount ? parseFloat(item.physicalQty) : 0;
+        const sQty = item.softwareQty !== '' && item.softwareQty !== null && !isNaN(item.softwareQty) ? parseFloat(item.softwareQty) : 0;
+        const diff = pQty - sQty;
+        let status = 'NOT AUDITED';
+        let excessAmt = 0;
+        let shortAmt = 0;
+
+        if (hasCount) {
+          if (diff > 0) {
+            status = 'EXCESS';
+            excessAmt = diff;
+          } else if (diff < 0) {
+            status = 'SHORT';
+            shortAmt = Math.abs(diff);
+          } else {
+            status = 'MATCHED';
+          }
+        }
+
+        return {
+          "S.No": idx + 1,
+          "Medicine / Item Name": item.name || '',
+          "Software Quantity": item.softwareQty !== '' ? item.softwareQty : '',
+          "Physical Quantity": hasCount ? item.physicalQty : '',
+          "1. EXCESS": excessAmt > 0 ? excessAmt : '',
+          "2. SHORT": shortAmt > 0 ? shortAmt : '',
+          "Audit Status": status,
+          "Remarks": item.remarks || ''
+        };
+      });
+
+      // Verification Signature Row
+      exportData.push({});
+      exportData.push({
+        "Medicine / Item Name": "A VERIFIED STOCK REPORT FROM SIVA KARANGULA"
+      });
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Audit Report");
+      XLSX.writeFile(wb, "Pharmacy_Verified_Stock_Audit_Report.xlsx");
+    }
+
+    // Export to PDF: 1. Excess, 2. Short
+    function exportToPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('p', 'pt', 'a4');
+
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text("NALINI GASTRO CENTER - STOCK AUDIT REPORT", 40, 40);
+
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()} | Total Audited Items: ${stockList.length}`, 40, 56);
+
+      const tableData = stockList.map((item, idx) => {
+        const hasCount = item.physicalQty !== '' && item.physicalQty !== null && !isNaN(item.physicalQty);
+        const pQty = hasCount ? parseFloat(item.physicalQty) : 0;
+        const sQty = item.softwareQty !== '' && item.softwareQty !== null && !isNaN(item.softwareQty) ? parseFloat(item.softwareQty) : 0;
+        const diff = pQty - sQty;
+        let excessVal = '-';
+        let shortVal = '-';
+        let status = 'NOT AUDITED';
+
+        if (hasCount) {
+          if (diff > 0) {
+            excessVal = `${diff}`;
+            status = 'EXCESS';
+          } else if (diff < 0) {
+            shortVal = `${Math.abs(diff)}`;
+            status = 'SHORT';
+          } else {
+            status = 'MATCH';
+          }
+        }
+
+        return [
+          idx + 1,
+          item.name || '—',
+          item.softwareQty !== '' ? item.softwareQty : '—',
+          hasCount ? item.physicalQty : '—',
+          excessVal,
+          shortVal,
+          status,
+          item.remarks || ''
+        ];
+      });
+
+      doc.autoTable({
+        startY: 70,
+        head: [['#', 'Item Name', 'Soft Qty', 'Phy Qty', '1. Excess', '2. Short', 'Status', 'Remarks']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        margin: { left: 40, right: 40, bottom: 60 },
+        didDrawPage: function (data) {
+          doc.setFontSize(9);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(37, 99, 235);
+          doc.text("A VERIFIED STOCK REPORT FROM SIVA KARANGULA", 40, doc.internal.pageSize.height - 30);
+          
+          doc.setFontSize(8);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(150);
+          doc.text(`Page ${data.pageNumber}`, doc.internal.pageSize.width - 70, doc.internal.pageSize.height - 30);
+        }
+      });
+
+      doc.save("Pharmacy_Stock_Audit_Report.pdf");
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[m]);
+    }
+
+    // Initial load
+    window.addEventListener('DOMContentLoaded', () => {
+      stockList = getFreshInitialStock();
+      renderStep1();
+    });
+  </script>
+</body>
+</html>
